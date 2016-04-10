@@ -111,6 +111,8 @@ namespace HexWar
 
             _bw.Write(mapData.id);
 
+            _bw.Write(mapDic.Count);
+
             Dictionary<int, bool>.Enumerator enumerator = mapDic.GetEnumerator();
 
             while (enumerator.MoveNext())
@@ -187,7 +189,9 @@ namespace HexWar
 
             mapData = mapDataDic[mapID];
 
-            for(int i = 0; i < mapData.size; i++)
+            int num = _br.ReadInt32();
+
+            for(int i = 0; i < num; i++)
             {
                 int pos = _br.ReadInt32();
 
@@ -198,7 +202,7 @@ namespace HexWar
 
             mapBelongDic = new Dictionary<int, bool>();
 
-            int num = _br.ReadInt32();
+            num = _br.ReadInt32();
 
             for(int i = 0; i < num; i++)
             {
