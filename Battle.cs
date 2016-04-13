@@ -43,14 +43,32 @@ namespace HexWar
 
         private Random random;
 
+        private Action<bool, MemoryStream> serverSendDataCallBack;
+
+        private Action<MemoryStream> clientSendDataCallBack;
+        private Action<bool> clientRefreshDataCallBack;
+
         public static void Init(Dictionary<int, IHeroSDS> _heroDataDic, Dictionary<int, MapData> _mapDataDic)
         {
             heroDataDic = _heroDataDic;
             mapDataDic = _mapDataDic;
         }
 
+        public void ServerSetCallBack(Action<bool, MemoryStream> _serverSendDataCallBack)
+        {
+            serverSendDataCallBack = _serverSendDataCallBack;
+        }
+
+        public void ClientSetCallBack(Action<MemoryStream> _clientSendDataCallBack, Action<bool> _clientRefreshDataCallBack)
+        {
+            clientSendDataCallBack = _clientSendDataCallBack;
+            clientRefreshDataCallBack = _clientRefreshDataCallBack;
+        }
+
         public void ServerStart(int _mapID,List<int> _mCards,List<int> _oCards)
         {
+            Log.Write("Battle Start!");
+
             random = new Random();
 
             mapData = mapDataDic[_mapID];
@@ -103,86 +121,159 @@ namespace HexWar
             }
 
             mOver = oOver = false;
+
+            ServerRefreshData(true);
+
+            ServerRefreshData(false);
         }
 
-        public void ServerRefreshData(BinaryWriter _bw,bool _isMine)
+        public void ServerGetPackage(byte[] _bytes,bool _isMine)
         {
-            _bw.Write(_isMine);
-
-            _bw.Write(mapData.id);
-
-            _bw.Write(mapDic.Count);
-
-            Dictionary<int, bool>.Enumerator enumerator = mapDic.GetEnumerator();
-
-            while (enumerator.MoveNext())
+            using (MemoryStream ms = new MemoryStream(_bytes))
             {
-                _bw.Write(enumerator.Current.Key);
+                using (BinaryReader br = new BinaryReader(ms))
+                {
+                    byte tag = br.ReadByte();
 
-                _bw.Write(enumerator.Current.Value);
-            }
+                    switch (tag)
+                    {
+                        case PackageTag.C2S_REFRESH:
 
-            _bw.Write(mapBelongDic.Count);
+                            ServerRefreshData(_isMine);
 
-            Dictionary<int, bool>.KeyCollection.Enumerator enumerator2 = mapBelongDic.Keys.GetEnumerator();
+                            break;
 
-            while (enumerator2.MoveNext())
-            {
-                _bw.Write(enumerator2.Current);
-            }
+                        case PackageTag.C2S_DOACTION:
 
-            _bw.Write(heroDic.Count);
+                            bool result = DoAction(_isMine, br);
 
-            Dictionary<int, Hero>.ValueCollection.Enumerator enumerator3 = heroDic.Values.GetEnumerator();
+                            if (result)
+                            {
+                                ServerRefreshData(true);
 
-            while (enumerator3.MoveNext())
-            {
-                Hero hero = enumerator3.Current;
+                                ServerRefreshData(false);
+                            }
 
-                _bw.Write(hero.uid);
-
-                _bw.Write(hero.id);
-
-                _bw.Write(hero.isMine);
-
-                _bw.Write(hero.pos);
-
-                _bw.Write(hero.nowHp);
-
-                _bw.Write(hero.nowPower);
-
-                _bw.Write(hero.canMove);
-            }
-
-            Dictionary<int, int> handCards = _isMine ? mHandCards : oHandCards;
-
-            _bw.Write(handCards.Count);
-
-            Dictionary<int, int>.Enumerator enumerator4 = handCards.GetEnumerator();
-
-            while (enumerator4.MoveNext())
-            {
-                _bw.Write(enumerator4.Current.Key);
-
-                _bw.Write(enumerator4.Current.Value);
-            }
-
-            if (_isMine)
-            {
-                _bw.Write(mMoney);
-
-                _bw.Write(mOver);
-            }
-            else
-            {
-                _bw.Write(oMoney);
-
-                _bw.Write(oOver);
+                            break;
+                    }
+                }
             }
         }
 
-        public void ClientRefreshData(BinaryReader _br,bool _isMine)
+        private void ServerRefreshData(bool _isMine)
         {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (BinaryWriter bw = new BinaryWriter(ms))
+                {
+                    Log.Write("ServerRefreshData  isMine:" + _isMine);
+
+                    bw.Write(PackageTag.S2C_REFRESH);
+
+                    bw.Write(_isMine);
+
+                    bw.Write(mapData.id);
+
+                    bw.Write(mapDic.Count);
+
+                    Dictionary<int, bool>.Enumerator enumerator = mapDic.GetEnumerator();
+
+                    while (enumerator.MoveNext())
+                    {
+                        bw.Write(enumerator.Current.Key);
+
+                        bw.Write(enumerator.Current.Value);
+                    }
+
+                    bw.Write(mapBelongDic.Count);
+
+                    Dictionary<int, bool>.KeyCollection.Enumerator enumerator2 = mapBelongDic.Keys.GetEnumerator();
+
+                    while (enumerator2.MoveNext())
+                    {
+                        bw.Write(enumerator2.Current);
+                    }
+
+                    bw.Write(heroDic.Count);
+
+                    Dictionary<int, Hero>.ValueCollection.Enumerator enumerator3 = heroDic.Values.GetEnumerator();
+
+                    while (enumerator3.MoveNext())
+                    {
+                        Hero hero = enumerator3.Current;
+
+                        bw.Write(hero.uid);
+
+                        bw.Write(hero.id);
+
+                        bw.Write(hero.isMine);
+
+                        bw.Write(hero.pos);
+
+                        bw.Write(hero.nowHp);
+
+                        bw.Write(hero.nowPower);
+
+                        bw.Write(hero.canMove);
+                    }
+
+                    Dictionary<int, int> handCards = _isMine ? mHandCards : oHandCards;
+
+                    bw.Write(handCards.Count);
+
+                    Dictionary<int, int>.Enumerator enumerator4 = handCards.GetEnumerator();
+
+                    while (enumerator4.MoveNext())
+                    {
+                        bw.Write(enumerator4.Current.Key);
+
+                        bw.Write(enumerator4.Current.Value);
+                    }
+
+                    if (_isMine)
+                    {
+                        bw.Write(mMoney);
+
+                        bw.Write(mOver);
+                    }
+                    else
+                    {
+                        bw.Write(oMoney);
+
+                        bw.Write(oOver);
+                    }
+
+                    serverSendDataCallBack(_isMine, ms);
+                }
+            }
+        }
+
+        public void ClientGetPackage(byte[] _bytes)
+        {
+            using (MemoryStream ms = new MemoryStream(_bytes))
+            {
+                using (BinaryReader br = new BinaryReader(ms))
+                {
+                    byte tag = br.ReadByte();
+
+                    switch (tag)
+                    {
+                        case PackageTag.S2C_REFRESH:
+
+                            ClientRefreshData(br);
+
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void ClientRefreshData(BinaryReader _br)
+        {
+            bool isMine = _br.ReadBoolean();
+
+            Log.Write("ClientRefreshData  isMine:" + isMine);
+
             mapDic = new Dictionary<int, bool>();
 
             int mapID = _br.ReadInt32();
@@ -195,9 +286,9 @@ namespace HexWar
             {
                 int pos = _br.ReadInt32();
 
-                bool isMine = _br.ReadBoolean();
+                bool mapIsMine = _br.ReadBoolean();
 
-                mapDic.Add(pos, isMine);
+                mapDic.Add(pos, mapIsMine);
             }
 
             mapBelongDic = new Dictionary<int, bool>();
@@ -223,7 +314,7 @@ namespace HexWar
 
                 int id = _br.ReadInt32();
 
-                bool isMine = _br.ReadBoolean();
+                bool heroIsMine = _br.ReadBoolean();
 
                 int pos = _br.ReadInt32();
 
@@ -233,7 +324,7 @@ namespace HexWar
 
                 bool canMove = _br.ReadBoolean();
 
-                Hero hero = new Hero(uid, isMine, id, heroDataDic[id], pos, nowHp, nowPower, canMove);
+                Hero hero = new Hero(uid, heroIsMine, id, heroDataDic[id], pos, nowHp, nowPower, canMove);
 
                 heroDic.Add(uid, hero);
 
@@ -242,7 +333,7 @@ namespace HexWar
 
             Dictionary<int, int> handCards;
 
-            if (_isMine)
+            if (isMine)
             {
                 mHandCards = new Dictionary<int, int>();
 
@@ -266,7 +357,7 @@ namespace HexWar
                 handCards.Add(uid, id);
             }
 
-            if (_isMine)
+            if (isMine)
             {
                 mMoney = _br.ReadInt32();
 
@@ -278,6 +369,8 @@ namespace HexWar
 
                 oOver = _br.ReadBoolean();
             }
+
+            clientRefreshDataCallBack(isMine);
         }
 
         public bool DoAction(bool _isMine, BinaryReader _br)

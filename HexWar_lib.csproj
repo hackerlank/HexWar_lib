@@ -59,7 +59,9 @@
   <ItemGroup>
     <Compile Include="Battle.cs" />
     <Compile Include="Hero.cs" />
+    <Compile Include="log\Log.cs" />
     <Compile Include="map\MapData.cs" />
+    <Compile Include="packageTag\PackageTag.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="publicTools\PublicTools.cs" />
     <Compile Include="sds\IHeroSDS.cs" />
