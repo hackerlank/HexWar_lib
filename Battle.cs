@@ -35,6 +35,12 @@ namespace HexWar
         public int mMoney;
         public int oMoney;
 
+        public Dictionary<int, int> mSummonAction = new Dictionary<int, int>();
+        public Dictionary<int, int> oSummonAction = new Dictionary<int, int>();
+
+        public Dictionary<int, int> mMoveAction = new Dictionary<int, int>();
+        public Dictionary<int, int> oMoveAction = new Dictionary<int, int>();
+
         private int cardUid;
         private int heroUid;
 
@@ -145,15 +151,8 @@ namespace HexWar
 
                         case PackageTag.C2S_DOACTION:
 
-                            bool result = DoAction(_isMine, br);
-
-                            if (result)
-                            {
-                                ServerRefreshData(true);
-
-                                ServerRefreshData(false);
-                            }
-
+                            ServerDoAction(_isMine, br);
+                            
                             break;
                     }
                 }
@@ -230,17 +229,60 @@ namespace HexWar
                         bw.Write(enumerator4.Current.Value);
                     }
 
+                    Dictionary<int, int> summonAction;
+
+                    Dictionary<int, int> moveAction;
+
+                    bool isOver;
+
                     if (_isMine)
                     {
                         bw.Write(mMoney);
 
                         bw.Write(mOver);
+
+                        isOver = mOver;
+                        
+                        summonAction = mSummonAction;
+
+                        moveAction = mMoveAction;
                     }
                     else
                     {
                         bw.Write(oMoney);
 
                         bw.Write(oOver);
+
+                        isOver = oOver;
+                        
+                        summonAction = oSummonAction;
+
+                        moveAction = oMoveAction;
+                    }
+
+                    if (isOver)
+                    {
+                        bw.Write(summonAction.Count);
+
+                        enumerator4 = summonAction.GetEnumerator();
+
+                        while (enumerator4.MoveNext())
+                        {
+                            bw.Write(enumerator4.Current.Key);
+
+                            bw.Write(enumerator4.Current.Value);
+                        }
+
+                        bw.Write(moveAction.Count);
+
+                        enumerator4 = moveAction.GetEnumerator();
+
+                        while (enumerator4.MoveNext())
+                        {
+                            bw.Write(enumerator4.Current.Key);
+
+                            bw.Write(enumerator4.Current.Value);
+                        }
                     }
 
                     serverSendDataCallBack(_isMine, ms);
@@ -357,31 +399,173 @@ namespace HexWar
                 handCards.Add(uid, id);
             }
 
+            Dictionary<int, int> summonAction;
+
+            Dictionary<int, int> moveAction;
+
+            bool isOver;
+
             if (isMine)
             {
                 mMoney = _br.ReadInt32();
 
-                mOver = _br.ReadBoolean();
+                isOver = mOver = _br.ReadBoolean();
+
+                summonAction = mSummonAction;
+
+                moveAction = mMoveAction;
             }
             else
             {
                 oMoney = _br.ReadInt32();
 
-                oOver = _br.ReadBoolean();
+                isOver = oOver = _br.ReadBoolean();
+
+                summonAction = oSummonAction;
+
+                moveAction = oMoveAction;
+            }
+
+            summonAction.Clear();
+
+            moveAction.Clear();
+
+            if (isOver)
+            {
+                int actionNum = _br.ReadInt32();
+
+                for (int i = 0; i < actionNum; i++)
+                {
+                    int uid = _br.ReadInt32();
+
+                    int pos = _br.ReadInt32();
+
+                    summonAction.Add(uid, pos);
+                }
+
+                actionNum = _br.ReadInt32();
+
+                for (int i = 0; i < actionNum; i++)
+                {
+                    int uid = _br.ReadInt32();
+
+                    int direction = _br.ReadInt32();
+
+                    moveAction.Add(uid, direction);
+                }
             }
 
             clientRefreshDataCallBack(isMine);
         }
 
-        public bool DoAction(bool _isMine, BinaryReader _br)
+        public void ClientRequestSummon(bool _isMine, int _uid, int _pos)
+        {
+            Dictionary<int, int> summonAction = _isMine ? mSummonAction : oSummonAction;
+
+            summonAction.Add(_uid, _pos);
+        }
+
+        public void ClientRequestUnsummon(bool _isMine, int _uid)
+        {
+            Dictionary<int, int> summonAction = _isMine ? mSummonAction : oSummonAction;
+
+            summonAction.Remove(_uid);
+        }
+
+        public void ClientRequestMove(bool _isMine, int _uid, int _direction)
+        {
+            Dictionary<int, int> moveAction = _isMine ? mMoveAction : oMoveAction;
+
+            moveAction.Add(_uid, _direction);
+        }
+
+        public void ClientRequestUnmove(bool _isMine, int _uid)
+        {
+            Dictionary<int, int> moveAction = _isMine ? mMoveAction : oMoveAction;
+
+            moveAction.Remove(_uid);
+        }
+
+        public void ClientRequestDoAction(bool _isMine)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (BinaryWriter bw = new BinaryWriter(ms))
+                {
+                    bw.Write(PackageTag.C2S_DOACTION);
+
+                    Dictionary<int, int> summonAction;
+
+                    Dictionary<int, int> moveAction;
+
+                    if (_isMine)
+                    {
+                        summonAction = mSummonAction;
+
+                        moveAction = mMoveAction;
+                    }
+                    else
+                    {
+                        summonAction = oSummonAction;
+
+                        moveAction = oMoveAction;
+                    }
+
+                    bw.Write(summonAction.Count);
+
+                    Dictionary<int, int>.Enumerator enumerator = summonAction.GetEnumerator();
+
+                    while (enumerator.MoveNext())
+                    {
+                        bw.Write(enumerator.Current.Key);
+
+                        bw.Write(enumerator.Current.Value);
+                    }
+
+                    bw.Write(moveAction.Count);
+
+                    enumerator = moveAction.GetEnumerator();
+
+                    while (enumerator.MoveNext())
+                    {
+                        bw.Write(enumerator.Current.Key);
+
+                        bw.Write(enumerator.Current.Value);
+                    }
+
+                    summonAction.Clear();
+
+                    moveAction.Clear();
+
+                    clientSendDataCallBack(ms);
+                }
+            }
+        }
+
+        public void ClientRequestRefreshData()
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (BinaryWriter bw = new BinaryWriter(ms))
+                {
+                    bw.Write(PackageTag.C2S_REFRESH);
+
+                    clientSendDataCallBack(ms);
+                }
+            }
+        }
+
+        private void ServerDoAction(bool _isMine, BinaryReader _br)
         {
             Dictionary<int, int> cards;
+            Dictionary<int, int> summonAction;
+            Dictionary<int, int> moveAction;
 
             if (_isMine)
             {
                 if (mOver)
                 {
-                    return false;
+                    return;
                 }
                 else
                 {
@@ -389,12 +573,16 @@ namespace HexWar
                 }
 
                 cards = mHandCards;
+
+                summonAction = mSummonAction;
+
+                moveAction = mMoveAction;
             }
             else
             {
                 if (oOver)
                 {
-                    return false;
+                    return;
                 }
                 else
                 {
@@ -402,6 +590,10 @@ namespace HexWar
                 }
 
                 cards = oHandCards;
+
+                summonAction = oSummonAction;
+
+                moveAction = oMoveAction;
             }
 
             int summonActionNum = _br.ReadInt32();
@@ -412,41 +604,95 @@ namespace HexWar
 
                 int pos = _br.ReadInt32();
 
-                if (mapDic.ContainsKey(pos) && mapDic[pos] == _isMine && !mapBelongDic.ContainsKey(pos) && !heroMapDic.ContainsKey(pos) && cards.ContainsKey(uid))
+                if (cards.ContainsKey(uid))
                 {
-                    int heroID = cards[uid];
+                    summonAction.Add(uid, pos);
+                }
+            }
+
+            int moveActionNum = _br.ReadInt32();
+
+            for (int i = 0; i < moveActionNum; i++)
+            {
+                int uid = _br.ReadInt32();
+
+                int direction = _br.ReadInt32();
+
+                if (heroDic.ContainsKey(uid) && heroDic[uid].isMine == _isMine)
+                {
+                    moveAction.Add(uid, direction);
+                }
+            }
+
+            if(mOver && oOver)
+            {
+                StartBattle();
+
+                ServerRefreshData(true);
+
+                ServerRefreshData(false);
+            }
+        }
+
+        private void ServerAddHero(bool _isMine,int _id,IHeroSDS _sds,int _pos)
+        {
+            Hero hero = new Hero(heroUid, _isMine, _id, _sds, _pos);
+
+            heroDic.Add(hero.uid, hero);
+
+            heroMapDic.Add(hero.pos, hero);
+
+            heroUid++;
+        }
+
+        private void StartBattle()
+        {
+            DoSummonAction();
+
+            DoMoveAction();
+
+            DoAttack();
+
+            HeroRecoverPower();
+
+            HeroRecoverCanMove();
+
+            ResetMapBelong();
+
+            RecoverCards();
+
+            RecoverMoney();
+
+            mOver = oOver = false;
+        }
+
+        private void DoSummonAction()
+        {
+            Dictionary<int, int>.Enumerator enumerator = mSummonAction.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                int uid = enumerator.Current.Key;
+                int pos = enumerator.Current.Value;
+
+                if (mapDic.ContainsKey(pos) && mapDic[pos] && !mapBelongDic.ContainsKey(pos) && !heroMapDic.ContainsKey(pos))
+                {
+                    int heroID = mHandCards[uid];
 
                     IHeroSDS sds = heroDataDic[heroID];
-
-                    if (!sds.GetHeroTypeSDS().GetCanMove())
+                    
+                    if (sds.GetCost() > mMoney)
                     {
-                        throw new Exception("a");
-                    }
-
-                    if (_isMine)
-                    {
-                        if (sds.GetCost() > mMoney)
-                        {
-                            throw new Exception("b");
-                        }
-                        else
-                        {
-                            mMoney -= sds.GetCost();
-                        }
+                        throw new Exception("b");
                     }
                     else
                     {
-                        if (sds.GetCost() > oMoney)
-                        {
-                            throw new Exception("c");
-                        }
-                        else
-                        {
-                            oMoney -= sds.GetCost();
-                        }
+                        mMoney -= sds.GetCost();
                     }
 
-                    ServerAddHero(_isMine, heroID, sds, pos);
+                    mHandCards.Remove(uid);
+
+                    ServerAddHero(true, heroID, sds, pos);
                 }
                 else
                 {
@@ -454,82 +700,131 @@ namespace HexWar
                 }
             }
 
-            Dictionary<int, Hero> oldPosDic = new Dictionary<int, Hero>();
+            mSummonAction.Clear();
+
+            enumerator = oSummonAction.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                int uid = enumerator.Current.Key;
+                int pos = enumerator.Current.Value;
+
+                if (mapDic.ContainsKey(pos) && !mapDic[pos] && !mapBelongDic.ContainsKey(pos) && !heroMapDic.ContainsKey(pos))
+                {
+                    int heroID = oHandCards[uid];
+
+                    IHeroSDS sds = heroDataDic[heroID];
+
+                    if (sds.GetCost() > oMoney)
+                    {
+                        throw new Exception("b");
+                    }
+                    else
+                    {
+                        oMoney -= sds.GetCost();
+                    }
+
+                    oHandCards.Remove(uid);
+
+                    ServerAddHero(false, heroID, sds, pos);
+                }
+                else
+                {
+                    throw new Exception("d");
+                }
+            }
+
+            oSummonAction.Clear();
+        }
+
+        private void DoMoveAction()
+        {
+            List<int> oldPosList = new List<int>();
+
             Dictionary<int, Hero> newPosDic = new Dictionary<int, Hero>();
 
-            int moveActionNum = _br.ReadInt32();
+            Dictionary<int, int>.Enumerator enumerator = mMoveAction.GetEnumerator();
 
-            for(int i = 0; i < moveActionNum; i++)
+            while (enumerator.MoveNext())
             {
-                int uid = _br.ReadInt32();
-
-                int direction = _br.ReadInt32();
-
+                int uid = enumerator.Current.Key;
+                int direction = enumerator.Current.Value;
+                
                 if (direction < 0 || direction > 6)
                 {
                     throw new Exception("e");
                 }
+                
+                Hero hero = heroDic[uid];
 
-                if (heroDic.ContainsKey(uid))
+                if (hero.sds.GetHeroTypeSDS().GetCanMove() && hero.canMove)
                 {
-                    Hero hero = heroDic[uid];
+                    int[] tmpArr = mapData.neighbourPosMap[hero.pos];
 
-                    if(hero.isMine == _isMine && hero.canMove)
+                    int pos = tmpArr[direction];
+                    
+                    if (pos != -1 && ((mapDic[pos] == hero.isMine && !mapBelongDic.ContainsKey(pos)) || (mapDic[pos] != hero.isMine && mapBelongDic.ContainsKey(pos))))
                     {
-                        int[] tmpArr = mapData.neighbourPosMap[hero.pos];
-
-                        int pos = tmpArr[direction];
-
-                        if(pos == -1)
-                        {
-                            throw new Exception("f");
-                        }
-
-                        if(mapDic[pos] == hero.isMine)
-                        {
-                            if (mapBelongDic.ContainsKey(pos))
-                            {
-                                throw new Exception("g");
-                            }
-                        }
-                        else
-                        {
-                            if (!mapBelongDic.ContainsKey(pos))
-                            {
-                                throw new Exception("h");
-                            }
-                        }
-
-                        oldPosDic.Add(hero.pos, hero);
+                        oldPosList.Add(hero.pos);
                         newPosDic.Add(pos, hero);
                     }
                 }
             }
 
-            Dictionary<int, Hero>.KeyCollection.Enumerator enumerator = oldPosDic.Keys.GetEnumerator();
+            enumerator = oMoveAction.GetEnumerator();
 
             while (enumerator.MoveNext())
             {
-                heroMapDic.Remove(enumerator.Current);
+                int uid = enumerator.Current.Key;
+                int direction = enumerator.Current.Value;
+
+                if (direction < 0 || direction > 6)
+                {
+                    throw new Exception("e");
+                }
+                
+                Hero hero = heroDic[uid];
+
+                if (hero.sds.GetHeroTypeSDS().GetCanMove() && hero.canMove)
+                {
+                    int[] tmpArr = mapData.neighbourPosMap[hero.pos];
+
+                    int pos = tmpArr[direction];
+
+                    if (pos != -1 && ((mapDic[pos] == hero.isMine && !mapBelongDic.ContainsKey(pos)) || (mapDic[pos] != hero.isMine && mapBelongDic.ContainsKey(pos))))
+                    {
+                        oldPosList.Add(hero.pos);
+                        newPosDic.Add(pos, hero);
+                    }
+                }
             }
 
-            Dictionary<int, Hero>.Enumerator enumerator2 = newPosDic.GetEnumerator();
-
-            while (enumerator2.MoveNext())
+            for(int i = 0; i < oldPosList.Count; i++)
             {
-                int pos = enumerator2.Current.Key;
+                heroMapDic.Remove(oldPosList[i]);
+            }
 
-                Hero hero = enumerator2.Current.Value;
+            Dictionary<int, Hero>.Enumerator enumerator3 = newPosDic.GetEnumerator();
+
+            while (enumerator3.MoveNext())
+            {
+                int pos = enumerator3.Current.Key;
+
+                Hero hero = enumerator3.Current.Value;
 
                 if (heroMapDic.ContainsKey(pos))
                 {
                     heroDic.Remove(hero.uid);
+
+                    throw new Exception("x");
                 }
                 else
                 {
                     heroMapDic.Add(pos, hero);
 
-                    if(mapDic[pos] != hero.isMine)
+                    hero.pos = pos;
+
+                    if (mapDic[pos] != hero.isMine)
                     {
                         mapDic[pos] = hero.isMine;
 
@@ -548,43 +843,6 @@ namespace HexWar
                     hero.nowPower--;
                 }
             }
-
-            if(mOver && oOver)
-            {
-                StartBattle();
-
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private void ServerAddHero(bool _isMine,int _id,IHeroSDS _sds,int _pos)
-        {
-            Hero hero = new Hero(heroUid, _isMine, _id, _sds, _pos);
-
-            heroDic.Add(hero.uid, hero);
-
-            heroMapDic.Add(hero.pos, hero);
-
-            heroUid++;
-        }
-
-        private void StartBattle()
-        {
-            DoAttack();
-
-            HeroRecoverPower();
-
-            HeroRecoverCanMove();
-
-            ResetMapBelong();
-
-            RecoverCards();
-
-            RecoverMoney();
         }
 
         private void DoAttack()
@@ -851,7 +1109,7 @@ namespace HexWar
             {
                 Hero hero = enumerator.Current;
 
-                if (hero.canMove)
+                if (hero.sds.GetHeroTypeSDS().GetCanMove() && hero.canMove)
                 {
                     int[] tmpPosArr = mapData.neighbourPosMap[hero.pos];
 
@@ -868,6 +1126,8 @@ namespace HexWar
                                 if (!tmpDic.ContainsKey(pos))
                                 {
                                     tmpList = new List<Hero>();
+
+                                    tmpDic.Add(pos, tmpList);
                                 }
                                 else
                                 {
@@ -890,7 +1150,7 @@ namespace HexWar
                 List<Hero> heros = enumerator2.Current.Value;
 
                 bool result = GetMapBelong(heros);
-                
+
                 if (mapDic[pos] != result)
                 {
                     mapBelongDic.Add(pos, true);
