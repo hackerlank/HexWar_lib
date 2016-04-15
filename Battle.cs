@@ -537,6 +537,15 @@ namespace HexWar
 
                     moveAction.Clear();
 
+                    if (_isMine)
+                    {
+                        mOver = true;
+                    }
+                    else
+                    {
+                        oOver = true;
+                    }
+
                     clientSendDataCallBack(ms);
                 }
             }
@@ -757,7 +766,7 @@ namespace HexWar
                 
                 Hero hero = heroDic[uid];
 
-                if (hero.sds.GetHeroTypeSDS().GetCanMove() && hero.canMove)
+                if (hero.canMove)
                 {
                     int[] tmpArr = mapData.neighbourPosMap[hero.pos];
 
@@ -770,6 +779,8 @@ namespace HexWar
                     }
                 }
             }
+
+            mMoveAction.Clear();
 
             enumerator = oMoveAction.GetEnumerator();
 
@@ -785,7 +796,7 @@ namespace HexWar
                 
                 Hero hero = heroDic[uid];
 
-                if (hero.sds.GetHeroTypeSDS().GetCanMove() && hero.canMove)
+                if (hero.canMove)
                 {
                     int[] tmpArr = mapData.neighbourPosMap[hero.pos];
 
@@ -798,6 +809,8 @@ namespace HexWar
                     }
                 }
             }
+
+            oMoveAction.Clear();
 
             for(int i = 0; i < oldPosList.Count; i++)
             {
@@ -1064,31 +1077,34 @@ namespace HexWar
             {
                 Hero hero = enumerator.Current;
 
-                bool canMove = true;
-
-                int[] tmpPosArr = mapData.neighbourPosMap[hero.pos];
-
-                for(int i = 0; i < 6; i++)
+                if (hero.sds.GetHeroTypeSDS().GetCanMove())
                 {
-                    int tmpPos = tmpPosArr[i];
+                    bool canMove = true;
 
-                    if(tmpPos != -1)
+                    int[] tmpPosArr = mapData.neighbourPosMap[hero.pos];
+
+                    for (int i = 0; i < 6; i++)
                     {
-                        if (heroMapDic.ContainsKey(tmpPos))
+                        int tmpPos = tmpPosArr[i];
+
+                        if (tmpPos != -1)
                         {
-                            Hero tmpHero = heroMapDic[tmpPos];
-
-                            if(tmpHero.isMine != hero.isMine && tmpHero.nowPower >= hero.nowPower)
+                            if (heroMapDic.ContainsKey(tmpPos))
                             {
-                                canMove = false;
+                                Hero tmpHero = heroMapDic[tmpPos];
 
-                                break;
+                                if (tmpHero.isMine != hero.isMine && tmpHero.nowPower >= hero.nowPower)
+                                {
+                                    canMove = false;
+
+                                    break;
+                                }
                             }
                         }
                     }
-                }
 
-                hero.canMove = canMove;
+                    hero.canMove = canMove;
+                }
 
                 if (hero.isSummon)
                 {
@@ -1109,7 +1125,7 @@ namespace HexWar
             {
                 Hero hero = enumerator.Current;
 
-                if (hero.sds.GetHeroTypeSDS().GetCanMove() && hero.canMove)
+                if (hero.canMove)
                 {
                     int[] tmpPosArr = mapData.neighbourPosMap[hero.pos];
 
