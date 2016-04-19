@@ -167,6 +167,10 @@ namespace HexWar
 
                     bw.Write(_isMine);
 
+                    bw.Write(mScore);
+
+                    bw.Write(oScore);
+
                     bw.Write(mapData.id);
 
                     bw.Write(mapDic.Count);
@@ -315,6 +319,10 @@ namespace HexWar
             clientIsMine = _br.ReadBoolean();
 
             Log.Write("ClientRefreshData  isMine:" + clientIsMine);
+
+            mScore = _br.ReadInt32();
+
+            oScore = _br.ReadInt32();
 
             mapDic = new Dictionary<int, bool>();
 
@@ -935,7 +943,7 @@ namespace HexWar
                 {
                     _mBw.Write(false);
 
-                    _oBw.Write(true);
+                    _oBw.Write(false);
                 }
             }
         }
@@ -948,7 +956,8 @@ namespace HexWar
             List<List<Hero>> heroTargetList = new List<List<Hero>>();
             List<int> heroDamageList = new List<int>();
 
-            Dictionary<Hero, Dictionary<Hero, int>> doDamageDic = new Dictionary<Hero, Dictionary<Hero, int>>();
+            Dictionary<int, int> doRushDic = new Dictionary<int, int>();
+            Dictionary<int, Dictionary<int, int>> doDamageDic = new Dictionary<int, Dictionary<int, int>>();
 
             List<Hero> dieHeroList = null;
 
@@ -966,15 +975,22 @@ namespace HexWar
                         heroTargetList.Add(targetHeroList);
                         heroDamageList.Add(hero.sds.GetDamage());
 
-                        Dictionary<Hero, int> tmpDamageDic = new Dictionary<Hero, int>();
+                        Dictionary<int, int> tmpDamageDic = new Dictionary<int, int>();
                         
-                        doDamageDic.Add(hero, tmpDamageDic);
+                        doDamageDic.Add(hero.pos, tmpDamageDic);
 
                         allDamage += hero.sds.GetDamage();
 
                         if (targetHeroList.Count == 1)
                         {
-                            targetHeroList[0].nowPower--;
+                            Hero targetHero = targetHeroList[0];
+
+                            if(targetHero.nowPower > 0)
+                            {
+                                doRushDic.Add(hero.pos, targetHero.pos);
+
+                                targetHero.nowPower--;
+                            }
                         }
                     }
                 }
@@ -1001,15 +1017,15 @@ namespace HexWar
                         
                         Hero beDamageHero = GetBeDamageHero(targetHeroList);
 
-                        Dictionary<Hero, int> tmpDic = doDamageDic[hero];
+                        Dictionary<int, int> tmpDic = doDamageDic[hero.pos];
 
-                        if (tmpDic.ContainsKey(beDamageHero))
+                        if (tmpDic.ContainsKey(beDamageHero.pos))
                         {
-                            tmpDic[beDamageHero]++;
+                            tmpDic[beDamageHero.pos]++;
                         }
                         else
                         {
-                            tmpDic.Add(beDamageHero, 1);
+                            tmpDic.Add(beDamageHero.pos, 1);
                         }
 
                         beDamageHero.nowHp--;
@@ -1064,31 +1080,48 @@ namespace HexWar
                 }
             }
 
+            _mBw.Write(doRushDic.Count);
+
+            _oBw.Write(doRushDic.Count);
+
+            Dictionary<int, int>.Enumerator enumerator3 = doRushDic.GetEnumerator();
+
+            while (enumerator3.MoveNext())
+            {
+                _mBw.Write(enumerator3.Current.Key);
+
+                _oBw.Write(enumerator3.Current.Key);
+
+                _mBw.Write(enumerator3.Current.Value);
+
+                _oBw.Write(enumerator3.Current.Value);
+            }
+
             _mBw.Write(doDamageDic.Count);
 
             _oBw.Write(doDamageDic.Count);
 
-            Dictionary<Hero, Dictionary<Hero, int>>.Enumerator enumerator = doDamageDic.GetEnumerator();
+            Dictionary<int, Dictionary<int, int>>.Enumerator enumerator = doDamageDic.GetEnumerator();
 
             while (enumerator.MoveNext())
             {
-                _mBw.Write(enumerator.Current.Key.pos);
+                _mBw.Write(enumerator.Current.Key);
 
-                _oBw.Write(enumerator.Current.Key.pos);
+                _oBw.Write(enumerator.Current.Key);
 
-                Dictionary<Hero, int> tmpDic = enumerator.Current.Value;
+                Dictionary<int, int> tmpDic = enumerator.Current.Value;
 
                 _mBw.Write(tmpDic.Count);
 
                 _oBw.Write(tmpDic.Count);
 
-                Dictionary<Hero, int>.Enumerator enumerator2 = tmpDic.GetEnumerator();
+                Dictionary<int, int>.Enumerator enumerator2 = tmpDic.GetEnumerator();
 
                 while (enumerator2.MoveNext())
                 {
-                    _mBw.Write(enumerator2.Current.Key.pos);
+                    _mBw.Write(enumerator2.Current.Key);
 
-                    _oBw.Write(enumerator2.Current.Key.pos);
+                    _oBw.Write(enumerator2.Current.Key);
 
                     _mBw.Write(enumerator2.Current.Value);
 
@@ -1490,6 +1523,24 @@ namespace HexWar
                 heroMapDic.Add(pos, hero);
 
                 hero.pos = pos;
+
+                if (mapDic[pos] != hero.isMine)
+                {
+                    mapDic[pos] = hero.isMine;
+
+                    if (hero.isMine)
+                    {
+                        mScore++;
+                        oScore--;
+                    }
+                    else
+                    {
+                        mScore--;
+                        oScore++;
+                    }
+                }
+
+                hero.nowPower--;
             }
 
             for (int i = 0; i < MAX_POWER; i++)
@@ -1499,6 +1550,22 @@ namespace HexWar
                 if (b)
                 {
                     int num = _br.ReadInt32();
+
+                    for(int m = 0; m < num; m++)
+                    {
+                        int pos = _br.ReadInt32();
+
+                        int targetPos = _br.ReadInt32();
+
+                        Hero targetHero = heroMapDic[targetPos];
+
+                        if(targetHero.nowPower > 0)
+                        {
+                            targetHero.nowPower--;
+                        }
+                    }
+
+                    num = _br.ReadInt32();
 
                     for(int m = 0; m < num; m++)
                     {
