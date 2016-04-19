@@ -2,7 +2,6 @@
 {
     public class Hero
     {
-        public int uid;
         public bool isMine;
 
         public int id;
@@ -16,9 +15,8 @@
 
         public bool isSummon;
 
-        public Hero(int _uid,bool _isMine,int _id,IHeroSDS _sds,int _pos)
+        public Hero(bool _isMine,int _id,IHeroSDS _sds,int _pos)
         {
-            uid = _uid;
             isMine = _isMine;
             id = _id;
             sds = _sds;
@@ -30,9 +28,8 @@
             isSummon = true;
         }
 
-        public Hero(int _uid,bool _isMine,int _id,IHeroSDS _sds,int _pos,int _nowHp,int _nowPower,bool _canMove)
+        public Hero(bool _isMine,int _id,IHeroSDS _sds,int _pos,int _nowHp,int _nowPower,bool _canMove)
         {
-            uid = _uid;
             isMine = _isMine;
             id = _id;
             sds = _sds;
