@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.IO;
 
 namespace HexWar
@@ -290,27 +291,28 @@ namespace HexWar
 
         public void ClientGetPackage(byte[] _bytes)
         {
-            using (MemoryStream ms = new MemoryStream(_bytes))
+            MemoryStream ms = new MemoryStream(_bytes);
+            BinaryReader br = new BinaryReader(ms);
+                
+            byte tag = br.ReadByte();
+
+            switch (tag)
             {
-                using (BinaryReader br = new BinaryReader(ms))
-                {
-                    byte tag = br.ReadByte();
+                case PackageTag.S2C_REFRESH:
 
-                    switch (tag)
-                    {
-                        case PackageTag.S2C_REFRESH:
+                    ClientRefreshData(br);
 
-                            ClientRefreshData(br);
+                    br.Close();
 
-                            break;
+                    ms.Dispose();
 
-                        case PackageTag.S2C_DOACTION:
+                    break;
 
-                            ClientStartBattle(br);
+                case PackageTag.S2C_DOACTION:
 
-                            break;
-                    }
-                }
+                    clientDoActionCallBack(br);
+
+                    break;
             }
         }
 
@@ -967,7 +969,7 @@ namespace HexWar
 
                 if(hero.sds.GetHeroTypeSDS().GetCanAttack() && hero.sds.GetDamage() > 0)
                 {
-                    List<Hero> targetHeroList = PublicTools.GetAttackTargetHeroList(mapData.neighbourPosMap, heroMapDic, hero);
+                    List<Hero> targetHeroList = BattlePublicTools.GetAttackTargetHeroList(mapData.neighbourPosMap, heroMapDic, hero);
 
                     if (targetHeroList.Count > 0)
                     {
@@ -1426,58 +1428,78 @@ namespace HexWar
             return result;
         }
 
-        private void ClientStartBattle(BinaryReader _br)
+        public int ClientDoSummonMyHero(BinaryReader _br)
         {
             Dictionary<int, int> summonAction = clientIsMine ? mSummonAction : oSummonAction;
 
-            Dictionary<int, int> tmpCards = clientIsMine ? mHandCards : oHandCards;
+            int summonNum = summonAction.Count;
 
-            Dictionary<int, int>.Enumerator enumerator = summonAction.GetEnumerator();
-
-            while (enumerator.MoveNext())
+            if(summonNum > 0)
             {
-                int tmpCardUid = enumerator.Current.Key;
+                Dictionary<int, int> tmpCards = clientIsMine ? mHandCards : oHandCards;
 
-                int pos = enumerator.Current.Value;
+                Dictionary<int, int>.Enumerator enumerator = summonAction.GetEnumerator();
 
-                int heroID = tmpCards[tmpCardUid];
-
-                IHeroSDS sds = heroDataDic[heroID];
-
-                if (clientIsMine)
+                while (enumerator.MoveNext())
                 {
-                    mMoney -= sds.GetCost();
-                }
-                else
-                {
-                    oMoney -= sds.GetCost();
+                    int tmpCardUid = enumerator.Current.Key;
+
+                    int pos = enumerator.Current.Value;
+
+                    int heroID = tmpCards[tmpCardUid];
+
+                    IHeroSDS sds = heroDataDic[heroID];
+
+                    if (clientIsMine)
+                    {
+                        mMoney -= sds.GetCost();
+                    }
+                    else
+                    {
+                        oMoney -= sds.GetCost();
+                    }
+
+                    tmpCards.Remove(tmpCardUid);
+
+                    AddHero(clientIsMine, heroID, sds, pos);
                 }
 
-                tmpCards.Remove(tmpCardUid);
-
-                AddHero(clientIsMine, heroID, sds, pos);
+                summonAction.Clear();
             }
 
-            summonAction.Clear();
+            return summonNum;
+        }
 
+        public int ClientDoSummonOppHero(BinaryReader _br)
+        {
             int summonNum = _br.ReadInt32();
 
-            for(int i = 0; i < summonNum; i++)
+            if(summonNum > 0)
             {
-                int pos = _br.ReadInt32();
+                for (int i = 0; i < summonNum; i++)
+                {
+                    int pos = _br.ReadInt32();
 
-                int heroID = _br.ReadInt32();
+                    int heroID = _br.ReadInt32();
 
-                IHeroSDS sds = heroDataDic[heroID];
+                    IHeroSDS sds = heroDataDic[heroID];
 
-                AddHero(!clientIsMine, heroID, sds, pos);
+                    AddHero(!clientIsMine, heroID, sds, pos);
+                }
             }
+
+            return summonNum;
+        }
+
+        public Dictionary<int, int> ClientDoMove(BinaryReader _br)
+        {
+            Dictionary<int, int> clientMoveDic = new Dictionary<int, int>();
 
             Dictionary<int, Hero> moveDic = new Dictionary<int, Hero>();
 
             Dictionary<int, int> moveAction = clientIsMine ? mMoveAction : oMoveAction;
 
-            enumerator = moveAction.GetEnumerator();
+            Dictionary<int, int>.Enumerator enumerator = moveAction.GetEnumerator();
 
             while (enumerator.MoveNext())
             {
@@ -1488,6 +1510,8 @@ namespace HexWar
                 int targetPos = mapData.neighbourPosMap[pos][direction];
 
                 moveDic.Add(targetPos, heroMapDic[pos]);
+
+                clientMoveDic.Add(pos, targetPos);
             }
 
             moveAction.Clear();
@@ -1503,6 +1527,8 @@ namespace HexWar
                 int targetPos = mapData.neighbourPosMap[pos][direction];
 
                 moveDic.Add(targetPos, heroMapDic[pos]);
+
+                clientMoveDic.Add(pos, targetPos);
             }
 
             Dictionary<int, Hero>.ValueCollection.Enumerator enumerator2 = moveDic.Values.GetEnumerator();
@@ -1526,6 +1552,8 @@ namespace HexWar
 
                 if (mapDic[pos] != hero.isMine)
                 {
+                    mapBelongDic.Remove(pos);
+
                     mapDic[pos] = hero.isMine;
 
                     if (hero.isMine)
@@ -1543,15 +1571,22 @@ namespace HexWar
                 hero.nowPower--;
             }
 
-            for (int i = 0; i < MAX_POWER; i++)
+            return clientMoveDic;
+        }
+
+        public IEnumerator ClientDoAttack(BinaryReader _br)
+        {
+            for (int i = MAX_POWER; i > 0; i--)
             {
                 bool b = _br.ReadBoolean();
 
                 if (b)
                 {
+                    yield return i;
+
                     int num = _br.ReadInt32();
 
-                    for(int m = 0; m < num; m++)
+                    for (int m = 0; m < num; m++)
                     {
                         int pos = _br.ReadInt32();
 
@@ -1559,39 +1594,52 @@ namespace HexWar
 
                         Hero targetHero = heroMapDic[targetPos];
 
-                        if(targetHero.nowPower > 0)
+                        if (targetHero.nowPower > 0)
                         {
                             targetHero.nowPower--;
                         }
+
+                        yield return new KeyValuePair<int, int>(pos, targetPos);
                     }
 
                     num = _br.ReadInt32();
 
-                    for(int m = 0; m < num; m++)
+                    for (int m = 0; m < num; m++)
                     {
                         int pos = _br.ReadInt32();
 
                         int targetNum = _br.ReadInt32();
 
-                        for(int n = 0; n < targetNum; n++)
+                        if(targetNum > 0)
                         {
-                            int targetPos = _br.ReadInt32();
+                            KeyValuePair<int, int>[] pair2 = new KeyValuePair<int, int>[targetNum];
 
-                            int damage = _br.ReadInt32();
+                            KeyValuePair<int, KeyValuePair<int, int>[]> pair = new KeyValuePair<int, KeyValuePair<int, int>[]>(pos,pair2);
 
-                            heroMapDic[targetPos].nowHp -= damage;
+                            for (int n = 0; n < targetNum; n++)
+                            {
+                                int targetPos = _br.ReadInt32();
+
+                                int damage = _br.ReadInt32();
+
+                                heroMapDic[targetPos].nowHp -= damage;
+
+                                pair2[n] = new KeyValuePair<int, int>(targetPos, damage);
+                            }
+
+                            yield return pair;
                         }
                     }
 
                     List<int> delList = null;
 
-                    enumerator3 = heroMapDic.GetEnumerator();
+                    Dictionary<int, Hero>.Enumerator enumerator3 = heroMapDic.GetEnumerator();
 
                     while (enumerator3.MoveNext())
                     {
-                        if(enumerator3.Current.Value.nowHp == 0)
+                        if (enumerator3.Current.Value.nowHp == 0)
                         {
-                            if(delList == null)
+                            if (delList == null)
                             {
                                 delList = new List<int>();
                             }
@@ -1600,16 +1648,19 @@ namespace HexWar
                         }
                     }
 
-                    if(delList != null)
+                    if (delList != null)
                     {
-                        for(int m = 0; m < delList.Count; m++)
+                        for (int m = 0; m < delList.Count; m++)
                         {
                             heroMapDic.Remove(delList[m]);
                         }
                     }
                 }
             }
+        }
 
+        public void ClientDoRecover(BinaryReader _br)
+        { 
             HeroRecoverPower();
 
             HeroRecoverCanMove();
@@ -1629,6 +1680,8 @@ namespace HexWar
 
             if (addCard)
             {
+                Dictionary<int, int> tmpCards = clientIsMine ? mHandCards : oHandCards;
+
                 int tmpCardUid = _br.ReadInt32();
 
                 int id = _br.ReadInt32();

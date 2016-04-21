@@ -2,7 +2,7 @@
 using HexWar;
 
 
-public class PublicTools
+public class BattlePublicTools
 {
     public static List<Hero> GetAttackTargetHeroList(Dictionary<int, int[]> _neighbourPosMap, Dictionary<int, Hero> _heroDic, Hero _hero)
     {

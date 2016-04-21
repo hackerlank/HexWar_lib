@@ -63,7 +63,7 @@
     <Compile Include="battle\map\MapData.cs" />
     <Compile Include="battle\packageTag\PackageTag.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="battle\publicTools\PublicTools.cs" />
+    <Compile Include="battle\battlePublicTools\BattlePublicTools.cs" />
     <Compile Include="battle\sds\IHeroSDS.cs" />
     <Compile Include="battle\sds\IHeroTypeSDS.cs" />
   </ItemGroup>
