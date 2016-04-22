@@ -58,7 +58,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="battle\Battle.cs" />
+    <Compile Include="battle\Battle2.cs" />
+    <Compile Include="battle\battlePublicTools\BattlePublicTools2.cs" />
     <Compile Include="battle\Hero.cs" />
+    <Compile Include="battle\Hero2.cs" />
     <Compile Include="battle\log\Log.cs" />
     <Compile Include="battle\map\MapData.cs" />
     <Compile Include="battle\packageTag\PackageTag.cs" />
