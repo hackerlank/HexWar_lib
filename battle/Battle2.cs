@@ -14,7 +14,7 @@ namespace HexWar
 
     public class Battle2
     {
-        private static Dictionary<int, IHeroSDS> heroDataDic;
+        internal static Dictionary<int, IHeroSDS> heroDataDic;
         private static Dictionary<int, MapData> mapDataDic;
 
         private const int MAX_POWER = 4;
@@ -67,6 +67,9 @@ namespace HexWar
         private Action<int, int> clientDoMoveCallBack;
         private Action<BinaryReader> clientPlayBattleCallBack;
 
+        //ai
+        private bool isVsAi;
+
         public static void Init(Dictionary<int, IHeroSDS> _heroDataDic, Dictionary<int, MapData> _mapDataDic)
         {
             heroDataDic = _heroDataDic;
@@ -87,11 +90,13 @@ namespace HexWar
             clientPlayBattleCallBack = _clientPlayBattleCallBack;
         }
 
-        public void ServerStart(int _mapID, List<int> _mCards, List<int> _oCards)
+        public void ServerStart(int _mapID, List<int> _mCards, List<int> _oCards, bool _isVsAi)
         {
             Log.Write("Battle2 Start!");
 
             random = new Random();
+
+            isVsAi = _isVsAi;
 
             mapData = mapDataDic[_mapID];
 
@@ -136,11 +141,21 @@ namespace HexWar
 
             isSkip = false;
 
-            isMineAction = true;
-
+            isMineAction = random.NextDouble() < 0.5;
+                
             ServerRefreshData(true);
 
-            ServerRefreshData(false);
+            if(!isVsAi)
+            {
+                ServerRefreshData(false);
+            }
+            else
+            {
+                if (!isMineAction)
+                {
+                    BattleAi2.Action(this);
+                }
+            }
         }
 
         public void ServerGetPackage(byte[] _bytes, bool _isMine)
@@ -453,61 +468,74 @@ namespace HexWar
 
             if (actionType == ActionType.SUMMON)
             {
-                ServerDoSummon(_br);
+                int tmpCardUid = _br.ReadInt32();
+
+                int pos = _br.ReadInt32();
+
+                ServerDoSummon(tmpCardUid, pos);
             }
             else if(actionType == ActionType.MOVE)
             {
-                ServerDoMove(_br);
+                int pos = _br.ReadInt32();
+
+                int direction = _br.ReadInt32();
+
+                ServerDoMove(pos, direction);
             }
             else
             {
-                if (isSkip)
-                {
-                    ServerStartBattle();
+                ServerDoSkip();
+            }
+        }
 
-                    isSkip = false;
-
-                    isMineAction = !isMineAction;
-                }
-                else
+        internal void ServerDoSkip()
+        {
+            if (isSkip)
+            {
+                ServerStartBattle();
+            }
+            else
+            {
+                using (MemoryStream ms = new MemoryStream())
                 {
-                    using (MemoryStream ms = new MemoryStream())
+                    using (BinaryWriter bw = new BinaryWriter(ms))
                     {
-                        using (BinaryWriter bw = new BinaryWriter(ms))
+                        isSkip = true;
+
+                        isMineAction = !isMineAction;
+
+                        bw.Write(PackageTag.S2C_DOACTION);
+
+                        bw.Write((int)ActionType.NONE);
+
+                        serverSendDataCallBack(true, ms);
+
+                        if (!isVsAi)
                         {
-                            bw.Write(PackageTag.S2C_DOACTION);
-
-                            bw.Write((int)ActionType.NONE);
-                            
-                            serverSendDataCallBack(true, ms);
-
                             serverSendDataCallBack(false, ms);
                         }
+                        else
+                        {
+                            if (!isMineAction)
+                            {
+                                BattleAi2.Action(this);
+                            }
+                        }
                     }
-
-                    isSkip = true;
-
-                    isMineAction = !isMineAction;
                 }
             }
         }
 
-        private void ServerDoSummon(BinaryReader _br)
+        internal void ServerDoSummon(int _tmpCardUid,int _pos)
         {
-            Log.Write("ServerDoSummon");
-
-            int tmpCardUid = _br.ReadInt32();
-
-            int pos = _br.ReadInt32();
-
             Dictionary<int, int> handCards = isMineAction ? mHandCards : oHandCards;
 
-            if(!mapDic.ContainsKey(pos) || mapDic[pos] != isMineAction || !handCards.ContainsKey(tmpCardUid))
+            if(!mapDic.ContainsKey(_pos) || mapDic[_pos] != isMineAction || !handCards.ContainsKey(_tmpCardUid))
             {
                 return;
             }
 
-            int cardID = handCards[tmpCardUid];
+            int cardID = handCards[_tmpCardUid];
 
             IHeroSDS heroSDS = heroDataDic[cardID];
 
@@ -516,9 +544,9 @@ namespace HexWar
                 return;
             }
 
-            handCards.Remove(tmpCardUid);
+            handCards.Remove(_tmpCardUid);
 
-            DoSummon(cardID, pos);
+            DoSummon(cardID, _pos);
 
             using (MemoryStream ms = new MemoryStream())
             {
@@ -530,11 +558,21 @@ namespace HexWar
 
                     bw.Write(cardID);
 
-                    bw.Write(pos);
+                    bw.Write(_pos);
 
                     serverSendDataCallBack(true, ms);
 
-                    serverSendDataCallBack(false, ms);
+                    if(!isVsAi)
+                    {
+                        serverSendDataCallBack(false, ms);
+                    }
+                    else
+                    {
+                        if (!isMineAction)
+                        {
+                            BattleAi2.Action(this);
+                        }
+                    }
                 }
             }
         }
@@ -559,18 +597,14 @@ namespace HexWar
             isMineAction = !isMineAction;
         }
         
-        private void ServerDoMove(BinaryReader _br)
+        internal void ServerDoMove(int _pos, int _direction)
         {
-            int pos = _br.ReadInt32();
-
-            int direction = _br.ReadInt32();
-
-            if (!heroMapDic.ContainsKey(pos))
+            if (!heroMapDic.ContainsKey(_pos))
             {
                 return;
             }
 
-            Hero2 hero = heroMapDic[pos];
+            Hero2 hero = heroMapDic[_pos];
 
             if(hero.isMine != isMineAction)
             {
@@ -582,12 +616,12 @@ namespace HexWar
                 return;
             }
 
-            if(direction < 0 || direction > 6)
+            if(_direction < 0 || _direction > 6)
             {
                 return;
             }
 
-            int targetPos = mapData.neighbourPosMap[pos][direction];
+            int targetPos = mapData.neighbourPosMap[_pos][_direction];
 
             if (targetPos == -1)
             {
@@ -599,7 +633,7 @@ namespace HexWar
                 return;
             }
 
-            DoMove(pos, direction);
+            DoMove(_pos, _direction);
 
             using (MemoryStream ms = new MemoryStream())
             {
@@ -609,13 +643,23 @@ namespace HexWar
 
                     bw.Write((int)ActionType.MOVE);
 
-                    bw.Write(pos);
+                    bw.Write(_pos);
 
-                    bw.Write(direction);
+                    bw.Write(_direction);
 
                     serverSendDataCallBack(true, ms);
 
-                    serverSendDataCallBack(false, ms);
+                    if (!isVsAi)
+                    {
+                        serverSendDataCallBack(false, ms);
+                    }
+                    else
+                    {
+                        if (!isMineAction)
+                        {
+                            BattleAi2.Action(this);
+                        }
+                    }
                 }
             }
         }
@@ -689,9 +733,23 @@ namespace HexWar
 
                     RecoverMoney();
 
+                    isSkip = false;
+
+                    isMineAction = !isMineAction;
+
                     serverSendDataCallBack(true, mMs);
 
-                    serverSendDataCallBack(false, oMs);
+                    if (!isVsAi)
+                    {
+                        serverSendDataCallBack(false, oMs);
+                    }
+                    else
+                    {
+                        if (!isMineAction)
+                        {
+                            BattleAi2.Action(this);
+                        }
+                    }
                 }
             }
         }
