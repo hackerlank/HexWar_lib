@@ -238,7 +238,7 @@ namespace HexWar
                         bw.Write(enumerator4.Current.Value);
                     }
 
-                    int oppHandCardsNum = _isMine ? oHandCards.Count : oHandCards.Count;
+                    int oppHandCardsNum = _isMine ? oHandCards.Count : mHandCards.Count;
 
                     bw.Write(oppHandCardsNum);
 
@@ -1096,6 +1096,11 @@ namespace HexWar
 
             if(actionType == ActionType.SUMMON)
             {
+                if (isMineAction != clientIsMine)
+                {
+                    clientOppHandCardsNum--;
+                }
+
                 int cardID = _br.ReadInt32();
 
                 int pos = _br.ReadInt32();
