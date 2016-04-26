@@ -9,8 +9,6 @@ namespace HexWar
     {
         public static void Action(Battle2 _battle)
         {
-            Log.Write("aiAction!");
-
             Random random = new Random();
 
             bool canMove;
@@ -97,20 +95,14 @@ namespace HexWar
 
                 if (r < 1 / 3)
                 {
-                    Log.Write("DoSummon");
-
                     DoSummon(_battle, random, summonPosList, myCards);
                 }
                 else if( r < 2 * 3)
                 {
-                    Log.Write("DoMove");
-
                     DoMove(_battle, random, myHeros);
                 }
                 else
                 {
-                    Log.Write("doSkip");
-
                     _battle.ServerDoSkip();
                 }
             }
@@ -120,14 +112,10 @@ namespace HexWar
 
                 if(r < 0.5)
                 {
-                    Log.Write("DoSummon");
-
                     DoSummon(_battle, random, summonPosList, myCards);
                 }
                 else
                 {
-                    Log.Write("doSkip");
-
                     _battle.ServerDoSkip();
                 }
             }
@@ -137,21 +125,15 @@ namespace HexWar
 
                 if (r < 0.5)
                 {
-                    Log.Write("DoMove");
-
                     DoMove(_battle, random, myHeros);
                 }
                 else
                 {
-                    Log.Write("doSkip");
-
                     _battle.ServerDoSkip();
                 }
             }
             else
             {
-                Log.Write("doSkip");
-
                 _battle.ServerDoSkip();
             }
         }
