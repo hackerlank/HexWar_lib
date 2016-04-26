@@ -35,7 +35,10 @@ namespace HexWar
                     {
                         if(tmpArr[i] != -1)
                         {
-                            tmpList.Add(i);
+                            if (!_battle.heroMapDic.ContainsKey(tmpArr[i]))
+                            {
+                                tmpList.Add(i);
+                            }
                         }
                     }
 
@@ -88,21 +91,26 @@ namespace HexWar
                 canSummon = myCards.Count > 0;
             }
 
-
             if(canSummon && canMove)
             {
                 double r = random.NextDouble();
 
                 if (r < 1 / 3)
                 {
+                    Log.Write("DoSummon");
+
                     DoSummon(_battle, random, summonPosList, myCards);
                 }
                 else if( r < 2 * 3)
                 {
+                    Log.Write("DoMove");
+
                     DoMove(_battle, random, myHeros);
                 }
                 else
                 {
+                    Log.Write("doSkip");
+
                     _battle.ServerDoSkip();
                 }
             }
@@ -112,10 +120,14 @@ namespace HexWar
 
                 if(r < 0.5)
                 {
+                    Log.Write("DoSummon");
+
                     DoSummon(_battle, random, summonPosList, myCards);
                 }
                 else
                 {
+                    Log.Write("doSkip");
+
                     _battle.ServerDoSkip();
                 }
             }
@@ -125,15 +137,21 @@ namespace HexWar
 
                 if (r < 0.5)
                 {
+                    Log.Write("DoMove");
+
                     DoMove(_battle, random, myHeros);
                 }
                 else
                 {
+                    Log.Write("doSkip");
+
                     _battle.ServerDoSkip();
                 }
             }
             else
             {
+                Log.Write("doSkip");
+
                 _battle.ServerDoSkip();
             }
         }

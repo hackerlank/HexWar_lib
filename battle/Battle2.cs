@@ -492,7 +492,11 @@ namespace HexWar
         {
             if (isSkip)
             {
+                Log.Write("ServerStartBattle");
+
                 ServerStartBattle();
+
+                Log.Write("ServerEndBattle");
             }
             else
             {
@@ -532,6 +536,8 @@ namespace HexWar
 
             if(!mapDic.ContainsKey(_pos) || mapDic[_pos] != isMineAction || !handCards.ContainsKey(_tmpCardUid))
             {
+                Log.Write("ServerDoSummon  违规操作  uid:" + _tmpCardUid + "  pos:" + _pos);
+
                 return;
             }
 
@@ -541,6 +547,8 @@ namespace HexWar
 
             if(heroSDS.GetCost() > (isMineAction ? mMoney : oMoney))
             {
+                Log.Write("ServerDoSummon  违规操作  oMoney:" + oMoney);
+
                 return;
             }
 
@@ -608,16 +616,22 @@ namespace HexWar
 
             if(hero.isMine != isMineAction)
             {
+                Log.Write("ServerDoMove  违规操作1");
+
                 return;
             }
 
             if(hero.isMoved || hero.isSummon)
             {
+                Log.Write("ServerDoMove  违规操作2");
+
                 return;
             }
 
             if(_direction < 0 || _direction > 6)
             {
+                Log.Write("ServerDoMove  违规操作3");
+
                 return;
             }
 
@@ -625,11 +639,15 @@ namespace HexWar
 
             if (targetPos == -1)
             {
+                Log.Write("ServerDoMove  违规操作4");
+
                 return;
             }
 
             if (heroMapDic.ContainsKey(targetPos))
             {
+                Log.Write("ServerDoMove  违规操作5");
+
                 return;
             }
 
@@ -1189,6 +1207,10 @@ namespace HexWar
         
         public IEnumerator ClientDoAttack(BinaryReader _br)
         {
+            isSkip = false;
+
+            isMineAction = !isMineAction;
+
             for (int i = MAX_POWER; i > 0; i--)
             {
                 bool b = _br.ReadBoolean();
@@ -1270,10 +1292,6 @@ namespace HexWar
                     }
                 }
             }
-
-            isSkip = false;
-
-            isMineAction = !isMineAction;
         }
 
         public void ClientDoRecover(BinaryReader _br)
