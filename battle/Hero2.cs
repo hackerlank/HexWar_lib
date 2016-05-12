@@ -12,11 +12,15 @@
         public int nowHp;
         public int nowPower;
 
-        public bool isMoved;
+        //public bool isMoved;
         public bool isSummon;
 
-        public Hero2(bool _isMine, int _id, IHeroSDS _sds, int _pos)
+        internal int uid;
+
+        public Hero2(int _uid, bool _isMine, int _id, IHeroSDS _sds, int _pos)
         {
+            uid = _uid;
+
             isMine = _isMine;
             id = _id;
             sds = _sds;
@@ -24,12 +28,12 @@
             nowHp = sds.GetHp();
             nowPower = sds.GetPower();
 
-            isMoved = false;
+            //isMoved = false;
 
             isSummon = !sds.GetHeroTypeSDS().GetCanCharge();
         }
 
-        public Hero2(bool _isMine, int _id, IHeroSDS _sds, int _pos, int _nowHp, int _nowPower, bool _isMoved, bool _isSummon)
+        public Hero2(bool _isMine, int _id, IHeroSDS _sds, int _pos, int _nowHp, int _nowPower, bool _isSummon)
         {
             isMine = _isMine;
             id = _id;
@@ -38,7 +42,7 @@
             nowHp = _nowHp;
             nowPower = _nowPower;
 
-            isMoved = _isMoved;
+            //isMoved = _isMoved;
             isSummon = _isSummon;
         }
     }

@@ -23,7 +23,7 @@ namespace HexWar
             {
                 Hero2 hero = enumerator.Current;
 
-                if(!hero.isMine && !hero.isMoved && !hero.isSummon)
+                if(!hero.isMine && !hero.isSummon && hero.nowPower > 0)
                 {
                     List<int> tmpList = new List<int>();
 

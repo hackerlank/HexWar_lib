@@ -50,6 +50,8 @@ namespace HexWar
 
         private Action<bool, MemoryStream> serverSendDataCallBack;
 
+        private int heroUid;
+
         //client data
         public bool clientIsMine;
 
@@ -97,6 +99,8 @@ namespace HexWar
             random = new Random();
 
             isVsAi = _isVsAi;
+
+            heroUid = 1;
 
             mapData = mapDataDic[_mapID];
 
@@ -235,7 +239,7 @@ namespace HexWar
 
                         bw.Write(hero.nowPower);
 
-                        bw.Write(hero.isMoved);
+                        //bw.Write(hero.isMoved);
 
                         bw.Write(hero.isSummon);
                     }
@@ -348,11 +352,9 @@ namespace HexWar
 
                 int nowPower = _br.ReadInt32();
 
-                bool isMoved = _br.ReadBoolean();
-
                 bool isSummon = _br.ReadBoolean();
 
-                AddHero(heroIsMine, id, pos, nowHp, nowPower, isMoved, isSummon);
+                AddHero(heroIsMine, id, pos, nowHp, nowPower, isSummon);
             }
 
             Dictionary<int, int> handCards;
@@ -598,7 +600,9 @@ namespace HexWar
                 oMoney -= heroSDS.GetCost();
             }
 
-            AddHero(isMineAction, _cardID, heroSDS, _pos);
+            AddHero(heroUid, isMineAction, _cardID, heroSDS, _pos);
+
+            heroUid++;
 
             isSkip = false;
 
@@ -621,7 +625,7 @@ namespace HexWar
                 return;
             }
 
-            if(hero.isMoved || hero.isSummon)
+            if(hero.nowPower < 1 || hero.isSummon)
             {
                 Log.Write("ServerDoMove  违规操作2");
 
@@ -696,7 +700,7 @@ namespace HexWar
 
             hero.nowPower--;
 
-            hero.isMoved = true;
+            //hero.isMoved = true;
 
             if (mapDic[targetPos] != hero.isMine)
             {
@@ -719,16 +723,16 @@ namespace HexWar
             isMineAction = !isMineAction;
         }
 
-        private void AddHero(bool _isMine, int _id, IHeroSDS _sds, int _pos)
+        private void AddHero(int _uid, bool _isMine, int _id, IHeroSDS _sds, int _pos)
         {
-            Hero2 hero = new Hero2(_isMine, _id, _sds, _pos);
+            Hero2 hero = new Hero2(_uid, _isMine, _id, _sds, _pos);
 
             heroMapDic.Add(hero.pos, hero);
         }
 
-        private void AddHero(bool _isMine, int _id, int _pos, int _nowHp, int _nowPower, bool _isMoved, bool _isSummon)
+        private void AddHero(bool _isMine, int _id, int _pos, int _nowHp, int _nowPower, bool _isSummon)
         {
-            Hero2 hero = new Hero2(_isMine, _id, heroDataDic[_id], _pos, _nowHp, _nowPower, _isMoved, _isSummon);
+            Hero2 hero = new Hero2(_isMine, _id, heroDataDic[_id], _pos, _nowHp, _nowPower, _isSummon);
 
             heroMapDic.Add(_pos, hero);
         }
@@ -1059,7 +1063,7 @@ namespace HexWar
                     }
                 }
 
-                hero.isMoved = false;
+                //hero.isMoved = false;
 
                 hero.isSummon = false;
             }
