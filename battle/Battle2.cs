@@ -16,6 +16,7 @@ namespace HexWar
     {
         internal static Dictionary<int, IHeroSDS> heroDataDic;
         private static Dictionary<int, MapData> mapDataDic;
+        internal static Dictionary<int, ISkillSDS> skillDataDic;
 
         private const int MAX_POWER = 4;
         private const int DEFAULT_HAND_CARD_NUM = 5;
@@ -46,11 +47,13 @@ namespace HexWar
         public bool isSkip;
         public bool isMineAction;
 
-        private Random random;
+        internal Random random;
 
         private Action<bool, MemoryStream> serverSendDataCallBack;
 
         private int heroUid;
+
+        internal SuperEvent superEvent = new SuperEvent();
 
         //client data
         public bool clientIsMine;
@@ -72,10 +75,11 @@ namespace HexWar
         //ai
         private bool isVsAi;
 
-        public static void Init(Dictionary<int, IHeroSDS> _heroDataDic, Dictionary<int, MapData> _mapDataDic)
+        public static void Init(Dictionary<int, IHeroSDS> _heroDataDic, Dictionary<int, MapData> _mapDataDic, Dictionary<int, ISkillSDS> _skillDataDic)
         {
             heroDataDic = _heroDataDic;
             mapDataDic = _mapDataDic;
+            skillDataDic = _skillDataDic;
         }
 
         public void ServerSetCallBack(Action<bool, MemoryStream> _serverSendDataCallBack)
@@ -725,7 +729,7 @@ namespace HexWar
 
         private void AddHero(int _uid, bool _isMine, int _id, IHeroSDS _sds, int _pos)
         {
-            Hero2 hero = new Hero2(_uid, _isMine, _id, _sds, _pos);
+            Hero2 hero = new Hero2(this, _uid, _isMine, _id, _sds, _pos);
 
             heroMapDic.Add(hero.pos, hero);
         }
@@ -748,6 +752,8 @@ namespace HexWar
                     oBw.Write(PackageTag.S2C_PLAYBATTLE);
 
                     DoAttack(mBw, oBw);
+
+                    
 
                     HeroRecoverPower();
                     
@@ -818,6 +824,8 @@ namespace HexWar
 
                     _oBw.Write(true);
 
+                    CastSkill(heros);
+
                     DoAttackOnTurn(heros, _mBw, _oBw);
                 }
                 else
@@ -825,6 +833,71 @@ namespace HexWar
                     _mBw.Write(false);
 
                     _oBw.Write(false);
+                }
+            }
+        }
+
+        private void CastSkill(List<Hero2> _heros)
+        {
+            for(int i = 0; i < _heros.Count; i++)
+            {
+                string eventName = string.Format("{0}{1}", SkillEventName.ATTACK1, _heros[i].uid);
+
+                superEvent.DispatchEvent(eventName);
+            }
+
+            for(int i = 0; i < _heros.Count; i++)
+            {
+                _heros[i].RefreshData();
+            }
+
+            for (int i = 0; i < _heros.Count; i++)
+            {
+                string eventName = string.Format("{0}{1}", SkillEventName.ATTACK2, _heros[i].uid);
+
+                superEvent.DispatchEvent(eventName);
+            }
+
+            for (int i = 0; i < _heros.Count; i++)
+            {
+                _heros[i].RefreshData();
+            }
+
+            for (int i = 0; i < _heros.Count; i++)
+            {
+                string eventName = string.Format("{0}{1}", SkillEventName.ATTACK3, _heros[i].uid);
+
+                superEvent.DispatchEvent(eventName);
+            }
+
+            List<Hero2> dieHeroList = null;
+
+            for (int i = 0; i < _heros.Count; i++)
+            {
+                _heros[i].RefreshData();
+
+                if(_heros[i].nowHp < 1)
+                {
+                    if(dieHeroList == null)
+                    {
+                        dieHeroList = new List<Hero2>();
+                    }
+
+                    dieHeroList.Add(_heros[i]);
+                }
+            }
+
+            if(dieHeroList != null)
+            {
+                for(int i = 0; i < dieHeroList.Count; i++)
+                {
+                    Hero2 dieHero = dieHeroList[i];
+
+                    dieHero.Die();
+
+                    _heros.Remove(dieHero);
+
+                    heroMapDic.Remove(dieHero.pos);
                 }
             }
         }
@@ -846,7 +919,7 @@ namespace HexWar
             {
                 Hero2 hero = _heros[i];
 
-                if (hero.sds.GetHeroTypeSDS().GetCanAttack() && hero.sds.GetDamage() > 0)
+                if (hero.sds.GetHeroTypeSDS().GetCanAttack() && hero.damage > 0)
                 {
                     List<Hero2> targetHeroList = BattlePublicTools2.GetAttackTargetHeroList(mapData.neighbourPosMap, heroMapDic, hero);
 
@@ -854,13 +927,13 @@ namespace HexWar
                     {
                         heroList.Add(hero);
                         heroTargetList.Add(targetHeroList);
-                        heroDamageList.Add(hero.sds.GetDamage());
+                        heroDamageList.Add(hero.damage);
 
                         Dictionary<int, int> tmpDamageDic = new Dictionary<int, int>();
 
                         doDamageDic.Add(hero.pos, tmpDamageDic);
 
-                        allDamage += hero.sds.GetDamage();
+                        allDamage += hero.damage;
 
                         if (targetHeroList.Count == 1)
                         {
@@ -957,6 +1030,8 @@ namespace HexWar
                 {
                     Hero2 dieHero = dieHeroList[i];
 
+                    dieHero.Die();
+
                     heroMapDic.Remove(dieHero.pos);
                 }
             }
@@ -1049,6 +1124,8 @@ namespace HexWar
             {
                 Hero2 hero = enumerator.Current;
 
+                hero.RefreshRoundOver();
+
                 if (hero.nowPower < hero.sds.GetPower())
                 {
                     hero.nowPower++;
@@ -1057,9 +1134,9 @@ namespace HexWar
                 {
                     hero.nowHp += hero.nowPower;
 
-                    if (hero.nowHp > hero.sds.GetHp())
+                    if (hero.nowHp > hero.maxHp)
                     {
-                        hero.nowHp = hero.sds.GetHp();
+                        hero.nowHp = hero.maxHp;
                     }
                 }
 

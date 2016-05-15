@@ -7,5 +7,6 @@
     int GetDamage();
     int GetPower();
     int GetCost();
+    int[] GetSkills();
 }
 

@@ -1,10 +1,16 @@
 ﻿using System.Collections.Generic;
 using HexWar;
 
+public enum TargetType
+{
+    ALLY,
+    ENEMY,
+    ALL
+}
 
 public class BattlePublicTools2
 {
-    public static List<Hero2> GetAttackTargetHeroList(Dictionary<int, int[]> _neighbourPosMap, Dictionary<int, Hero2> _heroDic, Hero2 _hero)
+    public static List<Hero2> GetTargetHeroList(Dictionary<int, int[]> _neighbourPosMap, Dictionary<int, Hero2> _heroDic, Hero2 _hero, TargetType _targetType)
     {
         List<Hero2> result = new List<Hero2>();
 
@@ -32,7 +38,15 @@ public class BattlePublicTools2
                         {
                             Hero2 hero = _heroDic[pos];
 
-                            if (hero.isMine != _hero.isMine)
+                            if(_targetType == TargetType.ALL)
+                            {
+                                result.Add(_heroDic[pos]);
+                            }
+                            else if (_targetType == TargetType.ENEMY && hero.isMine != _hero.isMine)
+                            {
+                                result.Add(_heroDic[pos]);
+                            }
+                            else if (_targetType == TargetType.ALLY && hero.isMine == _hero.isMine)
                             {
                                 result.Add(_heroDic[pos]);
                             }
@@ -49,6 +63,11 @@ public class BattlePublicTools2
         }
 
         return result;
+    }
+
+    public static List<Hero2> GetAttackTargetHeroList(Dictionary<int, int[]> _neighbourPosMap, Dictionary<int, Hero2> _heroDic, Hero2 _hero)
+    {
+        return GetTargetHeroList(_neighbourPosMap, _heroDic, _hero, TargetType.ENEMY);
     }
 }
 

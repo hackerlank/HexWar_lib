@@ -66,6 +66,7 @@
     <Compile Include="battle\log\Log.cs" />
     <Compile Include="battle\map\MapData.cs" />
     <Compile Include="battle\packageTag\PackageTag.cs" />
+    <Compile Include="battle\sds\ISkillSDS.cs" />
     <Compile Include="battle\superEvent\SuperEvent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="battle\battlePublicTools\BattlePublicTools.cs" />
