@@ -60,16 +60,16 @@ namespace HexWar
 
                 int index = i;
 
-                Action del = delegate ()
+                Action<SuperEvent> del = delegate (SuperEvent e)
                 {
-                    CastSkill(index);
+                    CastSkill(index,e);
                 };
 
                 switch (skillSDS.GetAddType())
                 {
                     case SkillAddType.NULL:
 
-                        int eventIndex = battle.superEvent.AddEvent(skillSDS.GetEventName().ToString(), del);
+                        int eventIndex = battle.superEventListener.AddListener(skillSDS.GetEventName().ToString(), del);
 
                         eventIndexList.Add(eventIndex);
 
@@ -81,7 +81,7 @@ namespace HexWar
 
                         Log.Write("注册技能:" + sss);
 
-                        eventIndex = battle.superEvent.AddEvent(string.Format("{0}{1}", skillSDS.GetEventName(), uid), del);
+                        eventIndex = battle.superEventListener.AddListener(string.Format("{0}{1}", skillSDS.GetEventName(), uid), del);
 
                         eventIndexList.Add(eventIndex);
 
@@ -89,7 +89,7 @@ namespace HexWar
 
                     case SkillAddType.ISMINE:
 
-                        eventIndex = battle.superEvent.AddEvent(string.Format("{0}{1}", skillSDS.GetEventName(), isMine), del);
+                        eventIndex = battle.superEventListener.AddListener(string.Format("{0}{1}", skillSDS.GetEventName(), isMine), del);
 
                         eventIndexList.Add(eventIndex);
 
@@ -98,7 +98,7 @@ namespace HexWar
             }
         }
 
-        private void CastSkill(int _index)
+        private void CastSkill(int _index,SuperEvent e)
         {
             if (isSilent)
             {
@@ -346,7 +346,7 @@ namespace HexWar
         {
             for(int i = 0; i < eventIndexList.Count; i++)
             {
-                battle.superEvent.RemoveEvent(eventIndexList[i]);
+                battle.superEventListener.RemoveListener(eventIndexList[i]);
             }
         }
     }

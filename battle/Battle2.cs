@@ -53,7 +53,7 @@ namespace HexWar
 
         private int heroUid;
 
-        internal SuperEvent superEvent = new SuperEvent();
+        internal SuperEventListener superEventListener = new SuperEventListener();
 
         //client data
         public bool clientIsMine;
@@ -827,6 +827,8 @@ namespace HexWar
                     CastSkill(heros);
 
                     DoAttackOnTurn(heros, _mBw, _oBw);
+
+                    //AttackOver(heros);
                 }
                 else
                 {
@@ -843,7 +845,15 @@ namespace HexWar
             {
                 string eventName = string.Format("{0}{1}", SkillEventName.ATTACK1, _heros[i].uid);
 
-                superEvent.DispatchEvent(eventName);
+                SuperEvent e = new SuperEvent(eventName);
+
+                superEventListener.DispatchEvent(e);
+
+                eventName = string.Format("{0}{1}", SkillEventName.ATTACK1, _heros[i].isMine);
+
+                e = new SuperEvent(eventName, _heros[i].uid);
+
+                superEventListener.DispatchEvent(e);
             }
 
             for(int i = 0; i < _heros.Count; i++)
@@ -855,7 +865,15 @@ namespace HexWar
             {
                 string eventName = string.Format("{0}{1}", SkillEventName.ATTACK2, _heros[i].uid);
 
-                superEvent.DispatchEvent(eventName);
+                SuperEvent e = new SuperEvent(eventName);
+
+                superEventListener.DispatchEvent(e);
+
+                eventName = string.Format("{0}{1}", SkillEventName.ATTACK2, _heros[i].isMine);
+
+                e = new SuperEvent(eventName, _heros[i].uid);
+
+                superEventListener.DispatchEvent(e);
             }
 
             for (int i = 0; i < _heros.Count; i++)
@@ -867,7 +885,15 @@ namespace HexWar
             {
                 string eventName = string.Format("{0}{1}", SkillEventName.ATTACK3, _heros[i].uid);
 
-                superEvent.DispatchEvent(eventName);
+                SuperEvent e = new SuperEvent(eventName);
+
+                superEventListener.DispatchEvent(e);
+
+                eventName = string.Format("{0}{1}", SkillEventName.ATTACK3, _heros[i].isMine);
+
+                e = new SuperEvent(eventName, _heros[i].uid);
+
+                superEventListener.DispatchEvent(e);
             }
 
             List<Hero2> dieHeroList = null;
