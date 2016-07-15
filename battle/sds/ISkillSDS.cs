@@ -14,12 +14,22 @@ public enum SkillAddType
     ISMINE
 }
 
+public enum SkillConditionType
+{
+    NULL,
+    DISTANCE_SMALLER,
+    HP_BIGGER,
+    HP_SMALLER,
+    POWER_BIGGER
+}
+
 public enum SkillTargetType
 {
     SELF,
     ALLY,
     ENEMY,
-    ALL
+    ALL,
+    TRIGGER
 }
 
 public enum SkillEffectType
@@ -37,6 +47,8 @@ public interface ISkillSDS
 {
     SkillEventName GetEventName();
     SkillAddType GetAddType();
+    SkillConditionType GetConditionType();
+    int GetConditionData();
     SkillTargetType GetTargetType();
     int GetTargetNum();
     SkillEffectType GetEffectType();

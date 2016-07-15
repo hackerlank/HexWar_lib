@@ -828,7 +828,7 @@ namespace HexWar
 
                     DoAttackOnTurn(heros, _mBw, _oBw);
 
-                    //AttackOver(heros);
+                    AttackOver(heros);
                 }
                 else
                 {
@@ -851,14 +851,16 @@ namespace HexWar
 
                 eventName = string.Format("{0}{1}", SkillEventName.ATTACK1, _heros[i].isMine);
 
-                e = new SuperEvent(eventName, _heros[i].uid);
+                e = new SuperEvent(eventName, _heros[i]);
 
                 superEventListener.DispatchEvent(e);
             }
 
-            for(int i = 0; i < _heros.Count; i++)
+            Dictionary<int, Hero2>.ValueCollection.Enumerator enumerator = heroMapDic.Values.GetEnumerator();
+
+            while (enumerator.MoveNext())
             {
-                _heros[i].RefreshData();
+                enumerator.Current.RefreshData();
             }
 
             for (int i = 0; i < _heros.Count; i++)
@@ -871,14 +873,16 @@ namespace HexWar
 
                 eventName = string.Format("{0}{1}", SkillEventName.ATTACK2, _heros[i].isMine);
 
-                e = new SuperEvent(eventName, _heros[i].uid);
+                e = new SuperEvent(eventName, _heros[i]);
 
                 superEventListener.DispatchEvent(e);
             }
 
-            for (int i = 0; i < _heros.Count; i++)
+            enumerator = heroMapDic.Values.GetEnumerator();
+
+            while (enumerator.MoveNext())
             {
-                _heros[i].RefreshData();
+                enumerator.Current.RefreshData();
             }
 
             for (int i = 0; i < _heros.Count; i++)
@@ -891,25 +895,27 @@ namespace HexWar
 
                 eventName = string.Format("{0}{1}", SkillEventName.ATTACK3, _heros[i].isMine);
 
-                e = new SuperEvent(eventName, _heros[i].uid);
+                e = new SuperEvent(eventName, _heros[i]);
 
                 superEventListener.DispatchEvent(e);
             }
 
             List<Hero2> dieHeroList = null;
 
-            for (int i = 0; i < _heros.Count; i++)
-            {
-                _heros[i].RefreshData();
+            enumerator = heroMapDic.Values.GetEnumerator();
 
-                if(_heros[i].nowHp < 1)
+            while (enumerator.MoveNext())
+            {
+                enumerator.Current.RefreshData();
+
+                if (enumerator.Current.nowHp < 1)
                 {
-                    if(dieHeroList == null)
+                    if (dieHeroList == null)
                     {
                         dieHeroList = new List<Hero2>();
                     }
 
-                    dieHeroList.Add(_heros[i]);
+                    dieHeroList.Add(enumerator.Current);
                 }
             }
 
@@ -939,7 +945,7 @@ namespace HexWar
             Dictionary<int, int> doRushDic = new Dictionary<int, int>();
             Dictionary<int, Dictionary<int, int>> doDamageDic = new Dictionary<int, Dictionary<int, int>>();
 
-            List<Hero2> dieHeroList = null;
+            //List<Hero2> dieHeroList = null;
 
             for (int i = 0; i < _heros.Count; i++)
             {
@@ -1033,12 +1039,12 @@ namespace HexWar
                                 }
                             }
 
-                            if (dieHeroList == null)
-                            {
-                                dieHeroList = new List<Hero2>();
-                            }
+                            //if (dieHeroList == null)
+                            //{
+                            //    dieHeroList = new List<Hero2>();
+                            //}
 
-                            dieHeroList.Add(beDamageHero);
+                            //dieHeroList.Add(beDamageHero);
                         }
 
                         break;
@@ -1050,17 +1056,17 @@ namespace HexWar
                 }
             }
 
-            if (dieHeroList != null)
-            {
-                for (int i = 0; i < dieHeroList.Count; i++)
-                {
-                    Hero2 dieHero = dieHeroList[i];
+            //if (dieHeroList != null)
+            //{
+            //    for (int i = 0; i < dieHeroList.Count; i++)
+            //    {
+            //        Hero2 dieHero = dieHeroList[i];
 
-                    dieHero.Die();
+            //        dieHero.Die();
 
-                    heroMapDic.Remove(dieHero.pos);
-                }
-            }
+            //        heroMapDic.Remove(dieHero.pos);
+            //    }
+            //}
 
             _mBw.Write(doRushDic.Count);
 
@@ -1108,6 +1114,57 @@ namespace HexWar
                     _mBw.Write(enumerator2.Current.Value);
 
                     _oBw.Write(enumerator2.Current.Value);
+                }
+            }
+        }
+
+        private void AttackOver(List<Hero2> _heros)
+        {
+            for (int i = 0; i < _heros.Count; i++)
+            {
+                string eventName = string.Format("{0}{1}", SkillEventName.ATTACKOVER, _heros[i].uid);
+
+                SuperEvent e = new SuperEvent(eventName);
+
+                superEventListener.DispatchEvent(e);
+
+                eventName = string.Format("{0}{1}", SkillEventName.ATTACKOVER, _heros[i].isMine);
+
+                e = new SuperEvent(eventName, _heros[i]);
+
+                superEventListener.DispatchEvent(e);
+            }
+
+            List<Hero2> dieHeroList = null;
+
+            Dictionary<int, Hero2>.ValueCollection.Enumerator enumerator = heroMapDic.Values.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                enumerator.Current.RefreshData();
+
+                if (enumerator.Current.nowHp < 1)
+                {
+                    if (dieHeroList == null)
+                    {
+                        dieHeroList = new List<Hero2>();
+                    }
+
+                    dieHeroList.Add(enumerator.Current);
+                }
+            }
+
+            if (dieHeroList != null)
+            {
+                for (int i = 0; i < dieHeroList.Count; i++)
+                {
+                    Hero2 dieHero = dieHeroList[i];
+
+                    dieHero.Die();
+
+                    _heros.Remove(dieHero);
+
+                    heroMapDic.Remove(dieHero.pos);
                 }
             }
         }

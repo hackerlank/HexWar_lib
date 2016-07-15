@@ -79,8 +79,6 @@ namespace HexWar
 
                         string sss = string.Format("{0}{1}", skillSDS.GetEventName(), uid);
 
-                        Log.Write("注册技能:" + sss);
-
                         eventIndex = battle.superEventListener.AddListener(string.Format("{0}{1}", skillSDS.GetEventName(), uid), del);
 
                         eventIndexList.Add(eventIndex);
@@ -134,9 +132,68 @@ namespace HexWar
                     targets = BattlePublicTools2.GetTargetHeroList(battle.mapData.neighbourPosMap, battle.heroMapDic, this, TargetType.ALL);
 
                     break;
+
+                case SkillTargetType.TRIGGER:
+
+                    Hero2 tmpHero = e.datas[0] as Hero2;
+
+                    if(tmpHero == this)
+                    {
+                        return;
+                    }
+
+                    targets = new List<Hero2>() { tmpHero };
+
+                    break;
             }
-            
-            while(targets.Count > skillSDS.GetTargetNum())
+
+            if(targets.Count == 0)
+            {
+                return;
+            }
+
+            switch (skillSDS.GetConditionType())
+            {
+                case SkillConditionType.DISTANCE_SMALLER:
+
+                    int dis = BattlePublicTools2.GetHerosDistance(battle.mapData.neighbourPosMap, pos, targets[0].pos);
+
+                    if (dis == 0 || dis >= skillSDS.GetConditionData())
+                    {
+                        return;
+                    }
+
+                    break;
+
+                case SkillConditionType.HP_BIGGER:
+
+                    if(nowHp <= skillSDS.GetConditionData())
+                    {
+                        return;
+                    }
+
+                    break;
+
+                case SkillConditionType.HP_SMALLER:
+
+                    if(nowHp >= skillSDS.GetConditionData())
+                    {
+                        return;
+                    }
+
+                    break;
+
+                case SkillConditionType.POWER_BIGGER:
+
+                    if(nowPower <= skillSDS.GetConditionData())
+                    {
+                        return;
+                    }
+
+                    break;
+            }
+
+            while (targets.Count > skillSDS.GetTargetNum())
             {
                 int index = (int)(battle.random.NextDouble() * targets.Count);
 
