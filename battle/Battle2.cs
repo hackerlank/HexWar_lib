@@ -753,8 +753,6 @@ namespace HexWar
 
                     DoAttack(mBw, oBw);
 
-                    
-
                     HeroRecoverPower();
                     
                     RecoverCards(mBw, oBw);
@@ -763,7 +761,7 @@ namespace HexWar
 
                     isSkip = false;
 
-                    isMineAction = !isMineAction;
+                    //isMineAction = !isMineAction;//设置行动顺序
 
                     serverSendDataCallBack(true, mMs);
 
@@ -854,6 +852,12 @@ namespace HexWar
                 e = new SuperEvent(eventName, _heros[i]);
 
                 superEventListener.DispatchEvent(e);
+
+                eventName = SkillEventName.ATTACK1.ToString();
+
+                e = new SuperEvent(eventName, _heros[i]);
+
+                superEventListener.DispatchEvent(e);
             }
 
             Dictionary<int, Hero2>.ValueCollection.Enumerator enumerator = heroMapDic.Values.GetEnumerator();
@@ -876,6 +880,12 @@ namespace HexWar
                 e = new SuperEvent(eventName, _heros[i]);
 
                 superEventListener.DispatchEvent(e);
+
+                eventName = SkillEventName.ATTACK2.ToString();
+
+                e = new SuperEvent(eventName, _heros[i]);
+
+                superEventListener.DispatchEvent(e);
             }
 
             enumerator = heroMapDic.Values.GetEnumerator();
@@ -894,6 +904,12 @@ namespace HexWar
                 superEventListener.DispatchEvent(e);
 
                 eventName = string.Format("{0}{1}", SkillEventName.ATTACK3, _heros[i].isMine);
+
+                e = new SuperEvent(eventName, _heros[i]);
+
+                superEventListener.DispatchEvent(e);
+
+                eventName = SkillEventName.ATTACK3.ToString();
 
                 e = new SuperEvent(eventName, _heros[i]);
 
@@ -1129,6 +1145,12 @@ namespace HexWar
                 superEventListener.DispatchEvent(e);
 
                 eventName = string.Format("{0}{1}", SkillEventName.ATTACKOVER, _heros[i].isMine);
+
+                e = new SuperEvent(eventName, _heros[i]);
+
+                superEventListener.DispatchEvent(e);
+
+                eventName = SkillEventName.ATTACKOVER.ToString();
 
                 e = new SuperEvent(eventName, _heros[i]);
 
@@ -1373,7 +1395,7 @@ namespace HexWar
         {
             isSkip = false;
 
-            isMineAction = !isMineAction;
+            //isMineAction = !isMineAction;//设置行动顺序
 
             for (int i = MAX_POWER; i > 0; i--)
             {

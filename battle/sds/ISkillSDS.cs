@@ -7,11 +7,12 @@
     DIE
 }
 
-public enum SkillAddType
+public enum SkillTrigger
 {
-    NULL,
-    UID,
-    ISMINE
+    ALL,
+    HERO,
+    ALLY,
+    ENEMY
 }
 
 public enum SkillConditionType
@@ -46,7 +47,7 @@ public enum SkillEffectType
 public interface ISkillSDS
 {
     SkillEventName GetEventName();
-    SkillAddType GetAddType();
+    SkillTrigger GetTrigger();
     SkillConditionType GetConditionType();
     int GetConditionData();
     SkillTargetType GetTargetType();

@@ -65,9 +65,9 @@ namespace HexWar
                     CastSkill(index,e);
                 };
 
-                switch (skillSDS.GetAddType())
+                switch (skillSDS.GetTrigger())
                 {
-                    case SkillAddType.NULL:
+                    case SkillTrigger.ALL:
 
                         int eventIndex = battle.superEventListener.AddListener(skillSDS.GetEventName().ToString(), del);
 
@@ -75,9 +75,7 @@ namespace HexWar
 
                         break;
 
-                    case SkillAddType.UID:
-
-                        string sss = string.Format("{0}{1}", skillSDS.GetEventName(), uid);
+                    case SkillTrigger.HERO:
 
                         eventIndex = battle.superEventListener.AddListener(string.Format("{0}{1}", skillSDS.GetEventName(), uid), del);
 
@@ -85,9 +83,17 @@ namespace HexWar
 
                         break;
 
-                    case SkillAddType.ISMINE:
+                    case SkillTrigger.ALLY:
 
                         eventIndex = battle.superEventListener.AddListener(string.Format("{0}{1}", skillSDS.GetEventName(), isMine), del);
+
+                        eventIndexList.Add(eventIndex);
+
+                        break;
+
+                    case SkillTrigger.ENEMY:
+
+                        eventIndex = battle.superEventListener.AddListener(string.Format("{0}{1}", skillSDS.GetEventName(), !isMine), del);
 
                         eventIndexList.Add(eventIndex);
 
@@ -313,7 +319,7 @@ namespace HexWar
 
         internal void RefreshData()
         {
-            if(!isSilent && changeIsSilent)
+            if (!isSilent && changeIsSilent)
             {
                 isSilent = true;
 
@@ -325,11 +331,6 @@ namespace HexWar
                 damage += changeDamage;
 
                 changeDamage = 0;
-
-                if(damage < 0)
-                {
-                    damage = 0;
-                }
             }
 
             if(changeMaxHp != 0)
